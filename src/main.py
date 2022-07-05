@@ -17,7 +17,7 @@ rgb_blue = LED(23)
 camera = PiCamera()
 button = Button(2)
 
-def make_request(path):
+def make_request_ocr(path):
   img = cv2.imread(path)
   _, im_arr = cv2.imencode(".jpg", img)
   im_bytes = im_arr.tobytes()
@@ -29,17 +29,40 @@ def make_request(path):
   print(hello.text)
   os.remove(path)
 
+def make_request_barcode(path):
+  img = cv2.imread(path)
+  _, im_arr = cv2.imencode(".jpg", img)
+  im_bytes = im_arr.tobytes()
+  im_b64 = base64.b64encode(im_bytes)
+  
+  json_para_request = {"base64_img": str(im_b64)[2:]}
+  
+  hello = requests.post('https://backfreeze-ocr.herokuapp.com/barcode/', json = json_para_request)
+  print(hello.text)
+  os.remove(path)
 
+isbarcode = 0
 while True:
-    if button.is_pressed:
+    if button.is_pressed && !isbarcode:
         rgb_blue.on()
         led_red.off()
         camera.start_preview()
         sleep(3)
         camera.stop_preview()
         camera.capture('/home/intelifreeze/Desktop/image.jpg')
-        make_request('/home/intelifreeze/Desktop/image.jpg')
+        make_request_ocr('/home/intelifreeze/Desktop/image.jpg')
         rgb_blue.off()
+        isbarcode = 1
+    else if button.is_pressed && isbarcode:
+        rgb_blue.on()
+        led_red.off()
+        camera.start_preview()
+        sleep(3)
+        camera.stop_preview()
+        camera.capture('/home/intelifreeze/Desktop/image.jpg')
+        make_request_barcode('/home/intelifreeze/Desktop/image.jpg')
+        rgb_blue.off()
+        isbarcode = 0
     else:
         led_red.on()
         sleep(0.1)
