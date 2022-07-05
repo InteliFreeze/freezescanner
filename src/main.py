@@ -2,6 +2,7 @@ from gpiozero import LED
 from gpiozero import Button
 from picamera import PiCamera
 import json
+import base64
 import cv2
 import numpy as np
 from time import sleep
@@ -11,31 +12,40 @@ import requests
 # Set up the LEDs
 led_red = LED(17)
 led_green = LED(18)
-led_blue = LED(27)
+rgb_green = LED(22)
+rgb_blue = LED(23)
 camera = PiCamera()
 button = Button(2)
 
 def make_request(path):
   img = cv2.imread(path)
-  imgResize = np.reshape(img, 151200)
-  imgJoin = '{"rgb_array": [' + ','.join(str(e) for e in imgResize) +  '] , "height": 168, "width": 300 }'
-  jsonParaRequest = json.loads(imgJoin)
-  hello = requests.post('https://backfreeze-ocr.herokuapp.com/img_to_str/', json = jsonParaRequest)
-  print(hello)
+  _, im_arr = cv2.imencode(".jpg", img)
+  im_bytes = im_arr.tobytes()
+  im_b64 = base64.b64encode(im_bytes)
+  
+  json_para_request = {"base64_img": str(im_b64)[2:]}
+  
+  hello = requests.post('https://backfreeze-ocr.herokuapp.com/img_to_str/', json = json_para_request)
+  print(hello.text)
   os.remove(path)
 
 
 while True:
-  led_blue.on()
-
-  button.wait_for_press()
-  led_blue.off()
-  led_green.on()
-  sleep(5)
-  camera.capture('/home/pi/Desktop/image.jpg')
-  make_request('/home/pi/Desktop/image.jpg')
-  led_green.off()
+    if button.is_pressed:
+        rgb_blue.on()
+        led_red.off()
+        camera.start_preview()
+        sleep(3)
+        camera.stop_preview()
+        camera.capture('/home/intelifreeze/Desktop/image.jpg')
+        make_request('/home/intelifreeze/Desktop/image.jpg')
+        rgb_blue.off()
+    else:
+        led_red.on()
+        sleep(0.1)
   
+
+
 
 
 
